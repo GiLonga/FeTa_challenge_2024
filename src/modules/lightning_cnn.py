@@ -31,7 +31,7 @@ class LitCNN(pl.LightningModule):  # pylint: disable=too-many-ancestors
         super().__init__()
         self.version = 0
         self.example_input_array = torch.Tensor(
-            1, 1, 256, 256, 256
+            1, 1, 176, 176, 176
         )  # display the intermediate input and output sizes of layers when trainer.fit() is called
         self.cnn = CNN(
             filters,

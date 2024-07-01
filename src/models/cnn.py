@@ -18,32 +18,42 @@ class CNN(nn.Module):
                 1,
                 filters,
                 4,
+                stride=1,
+                padding=1
             ),
             nn.ReLU(),
             nn.Conv3d(
                 filters,
                 filters * 2,
                 4,
+                stride=1,
+                padding=1
             ),
             nn.ReLU(),
+            nn.MaxPool3d(kernel_size=2, stride=2),
             nn.Conv3d(
                 filters * 2,
                 filters * 4,
                 4,
+                stride=1,
+                padding=1
             ),
             nn.ReLU(),
+            nn.MaxPool3d(kernel_size=2, stride=2),
             nn.Conv3d(
                 filters * 4,
                 filters * 8,
                 4,
+                stride=1,
+                padding=1
             ),
             nn.ReLU(),
             nn.MaxPool3d(2),
         )
-
+        conv_output_size = filters * 8 * 19 * 19 * 19
         self.regression_head = nn.Sequential(
             nn.Flatten(),
-            nn.Linear(32*122*122*122, output),
+            nn.Linear(conv_output_size, output),
         )
 
     def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
