@@ -6,7 +6,7 @@ from lightning.pytorch.callbacks.early_stopping import EarlyStopping
 from pytorch_lightning.loggers import TensorBoardLogger
 from torch.utils.data import DataLoader
 #from config.constants import NUM_WORKERS
-NUM_WORKERS=1
+NUM_WORKERS=0
 
 if __name__ == "__main__":
 
@@ -22,7 +22,7 @@ if __name__ == "__main__":
     train_loader = DataLoader(
         train_dataset,
         num_workers=NUM_WORKERS,
-        batch_size=10,
+        batch_size=8,
         shuffle=True,
     )
 
@@ -36,20 +36,20 @@ if __name__ == "__main__":
         num_workers=NUM_WORKERS,
     )
 
-    trainer = Trainer(
+    trainer = Trainer(accelerator="gpu", devices=1,
         logger=TensorBoardLogger(
-            "lightning_logs",
+            "/home/ubuntu/giorgio/v311/lightning_logs",
             name=name,
             log_graph=True,
         ),  # pyright: ignore[reportArgumentType]
         callbacks=[  # pyright: ignore[reportGeneralTypeIssues]
-            EarlyStopping(monitor="val_mse_loss", mode="min", patience=7),
+            EarlyStopping(monitor="val_mse_loss", mode="min", patience=10),
             ModelSummary(
                 max_depth=-1
             ),  # print the weights summary of the model when trainer.fit() is called
             LearningRateMonitor(logging_interval="epoch"),
         ],
-        max_epochs=50,
+        max_epochs=300,
         log_every_n_steps=1,
     )
 

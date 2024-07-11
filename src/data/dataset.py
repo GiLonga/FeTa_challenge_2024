@@ -1,7 +1,6 @@
 """Dataset utility functions"""
 
 from os.path import dirname, join
-
 import numpy as np
 import pandas as pd
 import torch
@@ -11,22 +10,23 @@ from torch.utils.data import TensorDataset
 #from src.config.constants import INTERIM_DATA_DIR_PATH
 #from src.data.augmentation import Augmentation
 
-RAW_DATA_DIR_PATH=      r"D:\Feta\FeTa_challenge_2024"
-INTERIM_DATA_DIR_PATH=  r"D:\Feta\Institution 2 - Medical University of Vienna\ "
+RAW_DATA_DIR_PATH=      r"/home/ubuntu/giorgio/v311/FeTa_challenge_2024/"
+INTERIM_DATA_DIR_PATH=  r"D:\Feta\Institution 2 - Medical University of Vienna\ "   #Actually this isn't working.
 
 class Dataset:
     """Dataset class to load and stratify data"""
 
     def __init__(self) -> None:
-        self.brains = np.load(join(RAW_DATA_DIR_PATH, "nii_data.npy"))
+        self.brains = np.load(join(RAW_DATA_DIR_PATH, "segment.npy"))
         self.normalize_brain_hu()
         self.num_patients = self.brains.shape[0]
 
         self.biometry = np.load(join(RAW_DATA_DIR_PATH, "biometry_data.npy")) #shape (N, 10, 4): 3 x,y,z coordinates and 1 label
-        
-        self.df_patient_info =pd.read_excel(join(dirname(INTERIM_DATA_DIR_PATH), "datiFetal_Vienna.xlsx"))
+        self.biometry=self.biometry[:,:,0:3]
+    
+        self.df_patient_info =pd.read_excel(join(dirname(RAW_DATA_DIR_PATH), r"datiFetal_Vienna.xlsx"))
         #self.indexes=self.df_patient_info.Subject
-        self.indexes=range(self.num_patients)
+        self.indexes=np.arange(self.num_patients)
 
     def normalize_brain_hu(self, background=0) -> None:
         """Normalize the mri corresponding to the density.
@@ -66,15 +66,19 @@ class Dataset:
             random_state=42,
         )
         test_idx = np.array(test_idx)
-        train_idx = self.df_patient_info.index[
-            ~self.df_patient_info.index.isin(
-                test_idx
-            )  # remove test_idx from data frame
-        ].to_numpy()
+        #train_idx = self.indexes[
+        #    ~self.indexes.isin(
+        #        test_idx
+        #    )  # remove test_idx from data frame
+        #].to_numpy()
+        train_pos = np.ones(self.num_patients, dtype=bool)
+        train_pos[test_idx] = False
+        train_idx=self.indexes[train_pos]
 
         train_idx, val_idx = train_test_split(
             train_idx,
             train_size=0.9,
+            random_state=42,
         )
 
         self.train_idx = train_idx
@@ -94,7 +98,7 @@ class Dataset:
                 - Validation dataset: TensorDataset for validation of the model.
                 - Test dataset: TensorDataset for testing of the model.
         """
-        biometry_pix_flat = self.biometry.reshape(self.num_patients,1,40)
+        biometry_pix_flat = self.biometry.reshape(self.num_patients,1,30)
         y_reg= self.unique_output(biometry_pix_flat)
         train_index, val_idx, test_index = self.train_val_test_split()
 
@@ -155,7 +159,8 @@ class Dataset:
         Returns:
             TensorDataset: The TensorDataset containing the data to evaluate the model.
         """
-        biometry_pix_flat = self.biometry.reshape(self.num_patients,1,40)
+
+        biometry_pix_flat = self.biometry.reshape(self.num_patients,1,30)
         y_reg= self.unique_output(biometry_pix_flat)
 
         _, _, predict_index = self.train_val_test_split()

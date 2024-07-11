@@ -7,7 +7,7 @@ from torch.optim import Adam
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 from models.cnn import CNN
-#from src.utils.visualization_cnn import Visualize
+from utils.visualization_cnn import Visualize
 
 
 class LitCNN(pl.LightningModule):  # pylint: disable=too-many-ancestors
@@ -15,12 +15,12 @@ class LitCNN(pl.LightningModule):  # pylint: disable=too-many-ancestors
 
     def __init__(
         self,
-        learning_rate=1e-5,
+        learning_rate=5e-5,
         mse_loss_weight=1.0,
         weight=1,
         focus_on=[0, 1],
         filters=4,
-        output=40,
+        output=30,
     ):
         """Initialize the LitCNN module
 
@@ -31,7 +31,7 @@ class LitCNN(pl.LightningModule):  # pylint: disable=too-many-ancestors
         super().__init__()
         self.version = 0
         self.example_input_array = torch.Tensor(
-            1, 1, 256, 256, 256
+            1, 1, 128, 128, 128
         )  # display the intermediate input and output sizes of layers when trainer.fit() is called
         self.cnn = CNN(
             filters,
@@ -61,8 +61,8 @@ class LitCNN(pl.LightningModule):  # pylint: disable=too-many-ancestors
         Returns:
             torch.Tensor: The weighted MSE loss.
         """
-        return (self.weights * F.mse_loss(inputs, targets, reduction="none")).mean()
-
+        #return (self.weights * F.mse_loss(inputs, targets, reduction="none")).mean()
+        return (F.mse_loss(inputs, targets, reduction="none")).mean()
     def training_step(  # pylint: disable=arguments-differ
         self, batch: list[torch.Tensor], batch_idx: int
     ) -> torch.Tensor:
@@ -147,16 +147,15 @@ class LitCNN(pl.LightningModule):  # pylint: disable=too-many-ancestors
         self.log_dict(metrics)
 
         # Check overfitting
-        #viz = Visualize()
+        viz = Visualize()
 
         # Two plots: (1) train (overfitting) and (2) test images
-        #viz.plot_img(
-        #    input_img=x_train.numpy()[0],
-        #    patient_idx=int(train_index.item()),
-        #    output=y_train_reg_hat[0],
-        #    path=self.logger.log_dir,  # pyright: ignore[reportArgumentType,reportOptionalMemberAccess]
-        #    single_fig=True,
-        #)
+        viz.plot_img(
+            patient_idx=int(train_index.item()),
+            output=y_train_reg_hat[0],
+            path=self.logger.log_dir,  # pyright: ignore[reportArgumentType,reportOptionalMemberAccess]
+            mse=test_mse_loss,
+        )
         #viz.plot_img(
         #    input_img=x.numpy()[0],
         #    patient_idx=int(test_idx.item()),
