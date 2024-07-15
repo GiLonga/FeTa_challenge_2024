@@ -30,7 +30,6 @@ class CNN(nn.Module):
                 padding=1
             ),
             nn.ReLU(),
-            #nn.MaxPool3d(kernel_size=2, stride=2),
             nn.Conv3d(
                 filters * 2,
                 filters * 4,
