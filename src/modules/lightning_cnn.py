@@ -6,8 +6,8 @@ import torch.nn.functional as F
 from torch.optim import Adam
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
-from models.cnn import CNN
-from utils.visualization_cnn import Visualize
+from src.models.cnn import CNN
+from src.utils.visualization_cnn import Visualize
 
 
 class LitCNN(pl.LightningModule):  # pylint: disable=too-many-ancestors
@@ -16,11 +16,12 @@ class LitCNN(pl.LightningModule):  # pylint: disable=too-many-ancestors
     def __init__(
         self,
         learning_rate=5e-5,
-        mse_loss_weight=1.0,
+        mse_loss_weight=50.0,
         weight=1,
-        focus_on=[0, 1],
+        focus_on= [24, 25, 26, 27, 28, 29],
         filters=4,
         output=30,
+        kernel=3
     ):
         """Initialize the LitCNN module
 
@@ -36,12 +37,13 @@ class LitCNN(pl.LightningModule):  # pylint: disable=too-many-ancestors
         self.cnn = CNN(
             filters,
             output,
+            kernel,
         )
 
         self.learning_rate = learning_rate
         self.mse_loss_weight = mse_loss_weight
 
-        self.weights = torch.ones(output)
+        self.weights = torch.ones(output).cuda()
         self.weights[focus_on] = weight
         self.save_hyperparameters()
         self.filters = filters
@@ -61,8 +63,8 @@ class LitCNN(pl.LightningModule):  # pylint: disable=too-many-ancestors
         Returns:
             torch.Tensor: The weighted MSE loss.
         """
-        #return (self.weights * F.mse_loss(inputs, targets, reduction="none")).mean()
-        return (F.mse_loss(inputs, targets, reduction="none")).mean()
+        return (self.weights * F.l1_loss(inputs, targets, reduction="none")).mean()
+        #return (F.l1_loss(inputs, targets, reduction="none")).sum()
     def training_step(  # pylint: disable=arguments-differ
         self, batch: list[torch.Tensor], batch_idx: int
     ) -> torch.Tensor:

@@ -16,7 +16,7 @@ class Visualize:
     """Visualization class to visualize model's output"""
 
     def __init__(self) -> None:
-        self.brains = np.load(join(RAW_DATA_DIR_PATH, "nii_data.npy"))
+        self.brains = np.load(join(RAW_DATA_DIR_PATH, "MRI_preprocessed_data.npy"))
         self.biometry = np.load(join(RAW_DATA_DIR_PATH, "biometry_data.npy")) #shape (N, 10, 4): 3 x,y,z coordinates and 1 label
         self.biometry=self.biometry[:,:,0:3]
 
@@ -128,30 +128,29 @@ class Visualize:
         for i in range(5):
             organ=bio_dict[i]
             fig, axs = plt.subplots(1, 3, figsize=(15, 5))
-            axs[0].imshow(self.brains[patient_idx][0,int(x_positions[i]),:,:],cmap='gray')
+            axs[0].imshow(self.brains[patient_idx][0,int((x_positions[2*i]+x_positions[2*i+1])/2),:,:],cmap='gray')
             axs[0].set_title(f'Sagittal {organ}')
             axs[0].axis('off')  # Turn off axis
             axs[0].scatter(z_positions[2*i],y_positions[2*i], c=color_dict[i], s=4)
             axs[0].scatter(z_positions[2*i+1],y_positions[2*i+1], c=color_dict[i], s=4)
-            axs[0].scatter(z_positions_truth[2*i],y_positions_truth[2*i], c="blue", s=3)
-            axs[0].scatter(z_positions_truth[2*i+1],y_positions_truth[2*i+1], c="blue", s=3)
-            #axs[0].scatter(5,256-250, c=color_dict[2], s=1)
+            axs[0].scatter(z_positions_truth[2*i],y_positions_truth[2*i], c="blue", s=4)
+            axs[0].scatter(z_positions_truth[2*i+1],y_positions_truth[2*i+1], c="blue", s=4)
 
-            axs[1].imshow(self.brains[patient_idx][0,:,int(y_positions[i]),:],cmap='gray')
+            axs[1].imshow(self.brains[patient_idx][0,:,int((y_positions[2*i]+y_positions[2*i+1])/2),:],cmap='gray')
             axs[1].set_title(f'Frontal {organ}')
             axs[1].axis('off')  # Turn off axis
             axs[1].scatter(z_positions[2*i],x_positions[2*i], c=color_dict[i], s=4)
             axs[1].scatter(z_positions[2*i+1],x_positions[2*i+1], c=color_dict[i], s=4)
-            axs[1].scatter(z_positions_truth[2*i],x_positions_truth[2*i], c="blue", s=3)
-            axs[1].scatter(z_positions_truth[2*i+1],x_positions_truth[2*i+1], c="blue", s=3)
+            axs[1].scatter(z_positions_truth[2*i],x_positions_truth[2*i], c="blue", s=4)
+            axs[1].scatter(z_positions_truth[2*i+1],x_positions_truth[2*i+1], c="blue", s=4)
 
-            axs[2].imshow(self.brains[patient_idx][0,:,:,int(z_positions[i])],cmap='gray')
+            axs[2].imshow(self.brains[patient_idx][0,:,:,int((z_positions[2*i]+z_positions[2*i+1])/2)],cmap='gray')
             axs[2].set_title(f'Trasversal {organ}')
             axs[2].axis('off')  # Turn off axis
             axs[2].scatter(y_positions[2*i],x_positions[2*i], c=color_dict[i], s=4)
             axs[2].scatter(y_positions[2*i+1],x_positions[2*i+1], c=color_dict[i], s=4)
-            axs[2].scatter(y_positions_truth[2*i],x_positions_truth[2*i], c="blue", s=3)
-            axs[2].scatter(y_positions_truth[2*i+1],x_positions_truth[2*i+1], c="blue", s=3)
+            axs[2].scatter(y_positions_truth[2*i],x_positions_truth[2*i], c="blue", s=4)
+            axs[2].scatter(y_positions_truth[2*i+1],x_positions_truth[2*i+1], c="blue", s=4)
 
 
             # Display the plot
