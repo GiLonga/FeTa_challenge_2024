@@ -13,6 +13,7 @@ import pandas as pd
 import ants
 import os
 import SimpleITK as sitk
+import csv
 
 IMG256_PATH= r"/home/ubuntu/giorgio/v311/FeTa_challenge_2024/sub-010_rec-mial_T2w.nii.gz"
 MODEL_PATH = r"/home/ubuntu/giorgio/v311/lightning_logs/brain_model/version_111/checkpoints/epoch=29-step=180.ckpt"
@@ -160,12 +161,26 @@ if __name__ == "__main__":
     biometry_df.to_csv(os.path.join(OUT_PATH, "keypointsFinal_coords.csv"))    
     # For each couple of points measure their distance and put in csv file with appropriate label 
     
-    
-    # Save measures dataframe
-   
+
     print(biometry)
     bio_img = sitk.ReadImage(output)
+
+    results = {'LCC': None, 'HV': None, 'bBIP': None, 'sBIP': None, 'TCD': None}
+    res = pd.DataFrame()
+    data_frames=[]
 
     for key in REGION_DICT:
         dist = get_dist(bio_img, key)
         print("The label ", key , "measures: ", dist)
+        results[key] = dist
+
+    data_frames.append(pd.DataFrame([results]))    
+    res= pd.concat(data_frames, ignore_index=True)
+
+    # Specify the CSV file name
+    csv_file = os.path.join(OUT_PATH,'biometry.csv')
+
+    # Write the DataFrame to a CSV file
+    res.to_csv(csv_file, index=False)
+
+    print(f"Data written to {csv_file}")
