@@ -163,4 +163,9 @@ if __name__ == "__main__":
     
     # Save measures dataframe
    
-    print( biometry)
+    print(biometry)
+    bio_img = sitk.ReadImage(output)
+
+    for key in REGION_DICT:
+        dist = get_dist(bio_img, key)
+        print("The label ", key , "measures: ", dist)
