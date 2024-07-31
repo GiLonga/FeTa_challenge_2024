@@ -86,9 +86,9 @@ class Optimization:
     def optimize_LCC(self):
         #while (self.LCC_mask[int(self.biometry[1,2]), int(self.biometry[1,1])]) == 0 :
         #        self.biometry[1,1]=+1
-        #plt.imshow(self.LCC_mask, cmap='gray')
-        #plt.scatter(self.biometry[0,2], self.biometry[0,1], c="red", s=3)
-        #plt.scatter(self.biometry[1,2], self.biometry[1,1],  c="red", s=3)
+        plt.imshow(self.LCC_mask, cmap='gray')
+        plt.scatter(self.biometry[0,2], self.biometry[0,1], c="red", s=3)
+        plt.scatter(self.biometry[1,2], self.biometry[1,1],  c="red", s=3)
         print("TO DO")
 
     def abline(self, axis="trs"):

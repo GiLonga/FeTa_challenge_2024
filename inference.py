@@ -14,6 +14,7 @@ import ants
 import os
 import SimpleITK as sitk
 
+IMG256_PATH= r"/home/ubuntu/giorgio/v311/FeTa_challenge_2024/sub-010_rec-mial_T2w.nii.gz"
 MODEL_PATH = r"/home/ubuntu/giorgio/v311/lightning_logs/brain_model/version_111/checkpoints/epoch=29-step=180.ckpt"
 IMG_PATH = r"/home/ubuntu/giorgio/v311/FeTa_challenge_2024/goundtruth_testBosisio/goundtruth/sub-010_dseg_warped_0.5mm.nii.gz"
 MRI_PATH = r"/home/ubuntu/giorgio/v311/FeTa_challenge_2024/MRI_testBosisio/images/sub-010_brain_warped_0.5mm.nii.gz"
@@ -73,6 +74,7 @@ def import_img(IMG_PATH:str, MRI_PATH:str):
     
     raw_img = nib.load(IMG_PATH)
     my_img = raw_img.get_fdata()
+    matrix = raw_img.affine
     raw_MRI = nib.load(MRI_PATH)
     my_MRI = raw_MRI.get_fdata()
     resized_img = resize(my_img)
@@ -80,7 +82,7 @@ def import_img(IMG_PATH:str, MRI_PATH:str):
     resized_img=np.expand_dims(resized_img, axis=0)
     resized_img=np.expand_dims(resized_img, axis=0)
 
-    return resized_img, resized_MRI
+    return resized_img, resized_MRI, matrix
 
 def get_dist(im, region):
     """
@@ -96,9 +98,33 @@ def get_dist(im, region):
     dist = round(np.linalg.norm((p1 - p2) * ip_res), 2)
     return dist
 
+def reconstruct_sparse_matrix(coordinates_and_values, num_x=176, num_y=224, num_z=176):
+    # Initialize a 3D matrix with zeros
+    sparse_matrix = np.zeros((num_x, num_y, num_z))
+    
+    # Populate the matrix using the coordinates_and_values array
+    for coord in coordinates_and_values:
+        x, y, z, value = coord
+        sparse_matrix[int(x), int(y), int(z)] = value
+    
+    return sparse_matrix
+
+def load_biometry(path) -> np.array:
+    bio=[]
+    my_img = nib.load(path)
+    nii_data = my_img.get_fdata()
+    non_zero_positions = np.nonzero(nii_data)
+    values = nii_data[non_zero_positions]
+    x_positions, y_positions, z_positions = non_zero_positions
+    coordinates_and_values = np.column_stack((x_positions, y_positions, z_positions, values))
+    coordinates_and_values = coordinates_and_values[coordinates_and_values[:, -1].argsort()]
+    bio.append(coordinates_and_values)
+    return np.array(bio[0])
+
+
 if __name__ == "__main__":
 
-    resized_img, resized_MRI = import_img(IMG_PATH, MRI_PATH) 
+    resized_img, resized_MRI, matrix = import_img(IMG_PATH, MRI_PATH) 
     lightning_cnn = LitCNN.load_from_checkpoint(checkpoint_path=MODEL_PATH)
     biometry=lightning_cnn(torch.Tensor(resized_img).cuda())
     biometry=reshape_output(biometry[0])
@@ -106,13 +132,32 @@ if __name__ == "__main__":
     opti.optimize()
     biometry=opti.biometry
     original_img, biometry = inverse_resize(resized_img[0][0], biometry)
+    ########
+    # Parte aggiunta dall'ultimo commit  
+    values=np.array([1,1,2,2,3,3,4,4,5,5])
+    bio_val=np.column_stack((biometry, values))
+    bio_sparse=reconstruct_sparse_matrix(bio_val)
+    output=r"/home/ubuntu/giorgio/v311/FeTa_challenge_2024/inference_bio.nii.gz"
+    # Create a NIfTI image
+    img = nib.Nifti1Image(bio_sparse, affine=matrix)
+    nib.save(img, output)
+    fixed = ants.image_read(IMG256_PATH)
+    moving = ants.image_read(output)
+    mywarpedimage = ants.apply_transforms( fixed=fixed, moving=moving, transformlist= TRANS_FILE, interpolator="nearestNeighbor",
+                                        whichtoinvert=[True], singleprecision=True,
+                                        )
+    output=r"/home/ubuntu/giorgio/v311/FeTa_challenge_2024/inference256_bio.nii.gz"
+    ants.image_write(mywarpedimage, output)
 
+    ########
     # Dataframe for mapping keypoints to image space
+
+    biometry = load_biometry(output)
+    biometry = biometry[:,0:3]
     biometry_df = pd.DataFrame(biometry, columns=['x','y','z'])
-    # Apply inverse transform using "apply_transforms_to_points"
-    biometryTrans_df = ants.apply_transforms_to_points(3, biometry_df, [TRANS_FILE], whichtoinvert=[True], verbose=False)
+    
     # Save coordinates of mapped keypoints using .csv file
-    biometryTrans_df.to_csv(os.path.join(OUT_PATH, "keypointsFinal_coords.csv"))    
+    biometry_df.to_csv(os.path.join(OUT_PATH, "keypointsFinal_coords.csv"))    
     # For each couple of points measure their distance and put in csv file with appropriate label 
     
     
