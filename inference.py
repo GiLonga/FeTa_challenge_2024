@@ -15,11 +15,13 @@ import os
 import SimpleITK as sitk
 import csv
 
-IMG256_PATH= r"/home/ubuntu/giorgio/v311/FeTa_challenge_2024/sub-010_rec-mial_T2w.nii.gz"
+sub_id=134 #To be changed
+base_path_1=r"/home/ubuntu/giorgio/v311/FeTa_challenge_2024" #To be changed 
+IMG256_PATH= os.path.join(base_path_1, f'sub-{sub_id}_rec-nmic_T2w.nii.gz' )
 MODEL_PATH = r"/home/ubuntu/giorgio/v311/lightning_logs/brain_model/version_111/checkpoints/epoch=29-step=180.ckpt"
-IMG_PATH = r"/home/ubuntu/giorgio/v311/FeTa_challenge_2024/goundtruth_testBosisio/goundtruth/sub-010_dseg_warped_0.5mm.nii.gz"
-MRI_PATH = r"/home/ubuntu/giorgio/v311/FeTa_challenge_2024/MRI_testBosisio/images/sub-010_brain_warped_0.5mm.nii.gz"
-TRANS_FILE = r"/home/ubuntu/giorgio/v311/FeTa_challenge_2024/0GenericAffine.mat"
+IMG_PATH = os.path.join(base_path_1, r"goundtruth_testBosisio/goundtruth", f'sub-{sub_id}_dseg_warped_0.5mm.nii.gz' )
+MRI_PATH = os.path.join(base_path_1, r"MRI_testBosisio/images", f'sub-{sub_id}_brain_warped_0.5mm.nii.gz' )
+TRANS_FILE = mat=os.path.join(base_path_1, f'0GenericAffine_{sub_id}.mat') 
 OUT_PATH = r"/home/ubuntu/giorgio/v311/FeTa_challenge_2024"
 
 REGION_DICT = {
@@ -122,6 +124,59 @@ def load_biometry(path) -> np.array:
     bio.append(coordinates_and_values)
     return np.array(bio[0])
 
+########################################### CODICE AGGIUNTO #################################    
+
+import fsl.data.image as fslimage
+from scipy import ndimage
+from scipy.cluster.hierarchy import fcluster, linkage
+from scipy.spatial.distance import pdist, squareform
+
+def biometry_transformer(fixed_path:str, moving_path:str, matrix_path:str, output_path:str ) -> None:
+    
+    image = fslimage.Image(moving_path)
+    data = image.data
+
+    # Define the structuring element for dilatation and perform the dilatation
+    structuring_element = ndimage.generate_binary_structure(3, 3)
+    dilated_data = ndimage.grey_dilation(data, footprint=structuring_element)
+
+    dilated_image = fslimage.Image(dilated_data, header=image.header)
+    dilated_image.save(output_path)
+
+    fixed = ants.image_read(fixed_path)
+    moving = ants.image_read( output_path)
+    mywarpedimage = ants.apply_transforms(  fixed=fixed,
+                                            moving=moving,
+                                            transformlist= matrix_path,
+                                            interpolator="nearestNeighbor",
+                                            whichtoinvert=[True], 
+                                            singleprecision=True,
+                                            )
+    
+    ants.image_write(mywarpedimage, output_path)
+    
+def group_the_keypoints(array: np.array, threshold=3):
+    def custom_distance(row1, row2):
+        return np.linalg.norm(row1 - row2)  # Euclidean distance
+    
+    distance_matrix = pdist(array, metric=custom_distance)
+    square_distance_matrix = squareform(distance_matrix)
+    # Perform hierarchical clustering
+    Z = linkage(square_distance_matrix, method='single')
+    labels = fcluster(Z, t=threshold, criterion='distance')
+    # Separate the rows into clusters
+    cluster1 = array[labels == 1]
+    cluster2 = array[labels == 2]
+    # Calculate the averages of each cluster
+    average_cluster1 = np.mean(cluster1, axis=0) if len(cluster1) > 0 else np.zeros(array.shape[1])
+    average_cluster2 = np.mean(cluster2, axis=0) if len(cluster2) > 0 else np.zeros(array.shape[1])
+    
+    # Combine the averages into a single array
+    label_1 = np.array([average_cluster1, average_cluster2])
+    
+    return label_1.astype(int)
+
+########################################################FINE PARTE 1################################################################
 
 if __name__ == "__main__":
 
@@ -133,34 +188,62 @@ if __name__ == "__main__":
     opti.optimize()
     biometry=opti.biometry
     original_img, biometry = inverse_resize(resized_img[0][0], biometry)
-    ########
-    # Parte aggiunta dall'ultimo commit  
+
+    # Here I'm creating the sparse matrix, alined as the patient matrix in the Atlas space.
     values=np.array([1,1,2,2,3,3,4,4,5,5])
     bio_val=np.column_stack((biometry, values))
     bio_sparse=reconstruct_sparse_matrix(bio_val)
     output=r"/home/ubuntu/giorgio/v311/FeTa_challenge_2024/inference_bio.nii.gz"
-    # Create a NIfTI image
     img = nib.Nifti1Image(bio_sparse, affine=matrix)
     nib.save(img, output)
-    fixed = ants.image_read(IMG256_PATH)
-    moving = ants.image_read(output)
-    mywarpedimage = ants.apply_transforms( fixed=fixed, moving=moving, transformlist= TRANS_FILE, interpolator="nearestNeighbor",
-                                        whichtoinvert=[True], singleprecision=True,
-                                        )
-    output=r"/home/ubuntu/giorgio/v311/FeTa_challenge_2024/inference256_bio.nii.gz"
-    ants.image_write(mywarpedimage, output)
 
-    ########
-    # Dataframe for mapping keypoints to image space
+    # Here I'm transforming the BIO_COORDS from 176x224x176 to 256x256x256 for patients with LOW resolutions
+    # (ZURICH)
+    #fixed = ants.image_read(IMG256_PATH)
+    #moving = ants.image_read(output)
+    #mywarpedimage = ants.apply_transforms( fixed=fixed, moving=moving, transformlist= TRANS_FILE, interpolator="nearestNeighbor",
+    #                                    whichtoinvert=[True], singleprecision=True,
+    #                                    )
+    #output=r"/home/ubuntu/giorgio/v311/FeTa_challenge_2024/inference256_bio.nii.gz"
+    #ants.image_write(mywarpedimage, output)
+
+ ###################################################### NEW CODE ##########################
+
+    # Here I'm transforming the BIO_COORDS from 176x224x176 to 256x256x256 for patients with HIGH resolutions
+    # (WIEN)
+    
+    ##### FRANCESCA here you need to fix the paths
+
+    import os
+    f=  IMG256_PATH
+    m=  os.path.join(base_path_1, f'sub-{sub_id}_bio.nii.gz' ) #To be changed
+    mat = TRANS_FILE 
+    biometry_transformer(f,m,mat,output)
+
 
     biometry = load_biometry(output)
-    biometry = biometry[:,0:3]
+    trasformed_biometry= np.empty((0, 4), dtype=int)
+    for i in range(5):
+        selected_rows = group_the_keypoints(biometry[biometry[:, 3] == i+1])
+        trasformed_biometry=np.concatenate((trasformed_biometry, selected_rows), axis=0)
+    biometry = trasformed_biometry[:,0:3]
+
+    sparse256 = reconstruct_sparse_matrix(trasformed_biometry, num_x=256, num_y=256, num_z=256)
+
+    raw_img = nib.load(IMG256_PATH)
+    my_img = raw_img.get_fdata()
+    matrix = raw_img.affine
+    img = nib.Nifti1Image(sparse256, affine=matrix)
+    nib.save(img, output)
+
+    ############################# END NEW CODE ####################################
+
+
     biometry_df = pd.DataFrame(biometry, columns=['x','y','z'])
     
     # Save coordinates of mapped keypoints using .csv file
     biometry_df.to_csv(os.path.join(OUT_PATH, "keypointsFinal_coords.csv"))    
     # For each couple of points measure their distance and put in csv file with appropriate label 
-    
 
     print(biometry)
     bio_img = sitk.ReadImage(output)
@@ -177,10 +260,8 @@ if __name__ == "__main__":
     data_frames.append(pd.DataFrame([results]))    
     res= pd.concat(data_frames, ignore_index=True)
 
-    # Specify the CSV file name
+    # Genereting CSV file name
     csv_file = os.path.join(OUT_PATH,'biometry.csv')
-
-    # Write the DataFrame to a CSV file
     res.to_csv(csv_file, index=False)
 
     print(f"Data written to {csv_file}")
