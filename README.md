@@ -6,6 +6,7 @@
 
 ### Training
 
+**TO DO**
 To train the model run:
 
 ```bash
@@ -16,7 +17,7 @@ The algorithm presented to address the Fetal Tissue Annotation and Segmentation 
 
 ### Testing
 
-TO DO
+**TO DO**
 ```bash
 python test.py --run_name MODEL_NAME
 ```
@@ -27,7 +28,7 @@ python test.py --run_name MODEL_NAME --dataset DATASET_NAME
 ```
 
 
-DOI: TO DO 
-PDF: TO DO 
+DOI: **TO DO**
+PDF: **TO DO**
 
 Applications:
