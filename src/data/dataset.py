@@ -17,7 +17,7 @@ class Dataset:
     """Dataset class to load and stratify data"""
 
     def __init__(self) -> None:
-        self.brains = np.load(join(RAW_DATA_DIR_PATH, "segment.npy"))
+        self.brains = np.load(join(RAW_DATA_DIR_PATH, "preprocessed_data.npy"))
         self.normalize_brain_hu()
         self.num_patients = self.brains.shape[0]
 
@@ -194,18 +194,14 @@ class Dataset:
         Create the target array with minimum elements (only unique information).
 
         Args:
-            isocenters_pix_flat (np.ndarray): Flat array containing the isocenter values.
+            TO DO.
 
         Returns:
             np.ndarray: Array with the unique values from the input data.
                 The resulting array has a shape of (self.num_patients, 1, 39).
 
         Notes:
-            - The resulting array contains 8 values for the isocenters,
-            21 values for the X_jaws, and 10 values for the Y_jaws.
-            - Specific indices are used to select the unique values from the input arrays.
-            Details about the selected indices can be found in the function implementation.
-            6*5=30
+            - 
         """
         #TO DO MAYBE
         y_reg=biometry_pix_flat

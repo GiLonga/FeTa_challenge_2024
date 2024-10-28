@@ -10,6 +10,7 @@ class CNN(nn.Module):
         self,
         filters: int,
         output: int,
+        kernel:int,
     ):
         super().__init__()
 
@@ -17,39 +18,40 @@ class CNN(nn.Module):
             nn.Conv3d(
                 1,
                 filters,
-                4,
+                kernel,
                 stride=1,
                 padding=1
             ),
             nn.ReLU(),
             nn.Conv3d(
                 filters,
-                filters * 2,
-                4,
+                filters* 2,
+                kernel,
                 stride=1,
                 padding=1
             ),
             nn.ReLU(),
+            nn.MaxPool3d(kernel_size=2, stride=2),         
             nn.Conv3d(
                 filters * 2,
                 filters * 4,
-                4,
+                kernel,
                 stride=1,
                 padding=1
             ),
             nn.ReLU(),
-            nn.MaxPool3d(kernel_size=2, stride=2),
             nn.Conv3d(
                 filters * 4,
                 filters * 8,
-                4,
+                kernel,
                 stride=1,
                 padding=1
             ),
+            #nn.BatchNorm3d(filters * 8),
             nn.ReLU(),
             nn.MaxPool3d(kernel_size=2, stride=2),
         )
-        conv_output_size = 864000 #filters * 8 * 19 * 19 * 19 TO FIX
+        conv_output_size = 1048576 #filters * 8 * 19 * 19 * 19 TO FIX
         self.regression_head = nn.Sequential(
             nn.Flatten(),
             nn.Linear(conv_output_size, output),

@@ -22,7 +22,7 @@ if __name__ == "__main__":
     train_loader = DataLoader(
         train_dataset,
         num_workers=NUM_WORKERS,
-        batch_size=8,
+        batch_size=16,
         shuffle=True,
     )
 
