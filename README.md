@@ -10,7 +10,7 @@ To train the model run:
 
 ```bash
 python train.py --run_name MODEL_NAME [--gaussian_heads H] [--sigma SIGMA_1 ... SIGMA_H] [--learn_sigma] [--noise NOISE_LEVEL] [--noise_p P]
-``
+```
 
 The algorithm presented to address the Fetal Tissue Annotation and Segmentation MICCAI 2024 Challenge: Biometry Task
 
